@@ -1,0 +1,44 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'th.ac.ubu.scsignage'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'th.ac.ubu.scsignage'
+        minSdk 21          // Android 5.0+ (covers old TV boxes)
+        targetSdk 34
+        versionCode 2
+        versionName '1.1.0'
+    }
+
+    // Fixed key so new APK versions install over old ones without uninstalling.
+    // For stronger security, replace with GitHub Secrets (see README).
+    signingConfigs {
+        release {
+            storeFile file('../keystore/sc-signage.jks')
+            storePassword System.getenv('SIGNING_STORE_PASSWORD') ?: 'scsignage'
+            keyAlias System.getenv('SIGNING_KEY_ALIAS') ?: 'scsignage'
+            keyPassword System.getenv('SIGNING_KEY_PASSWORD') ?: 'scsignage'
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.release
+        }
+    }
+
+    lint {
+        abortOnError false
+        checkReleaseBuilds false
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+}

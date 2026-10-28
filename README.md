@@ -1,4 +1,4 @@
-> **ubu-signage/** — ระบบ signage แบบ local ของ fork นี้ (เซิร์ฟเวอร์ Node.js + แอป Android box) ดู [ubu-signage/README.md](ubu-signage/README.md)
+> **sc-signage/** — ระบบ signage แบบ local ของ fork นี้ (เซิร์ฟเวอร์ Node.js + แอป Android box) ดู [sc-signage/README.md](sc-signage/README.md)
 
 # What is PiSignage?
 

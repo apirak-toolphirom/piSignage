@@ -1,0 +1,13 @@
+services:
+  signage:
+    build: .
+    container_name: sc-signage
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      ADMIN_USER: admin
+      ADMIN_PASS: change-me     # เปลี่ยนรหัสผ่านก่อนใช้งาน
+      TZ: Asia/Bangkok
+    volumes:
+      - ./data:/data
