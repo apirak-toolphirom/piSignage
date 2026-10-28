@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">SC Signage</string>
+    <string name="auto_dismiss_desc">ปิดข้อความแจ้งเตือนของกล่อง AIS (เช่น \"แนะนำให้ใช้สาย LAN\") ที่เด้งทับจอประชาสัมพันธ์โดยอัตโนมัติ</string>
 </resources>

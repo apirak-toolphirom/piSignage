@@ -13,7 +13,7 @@
 
     <application
         android:label="@string/app_name"
-        android:icon="@drawable/ic_launcher"
+        android:icon="@drawable/app_logo"
         android:banner="@drawable/banner"
         android:allowBackup="false"
         android:hardwareAccelerated="true"
@@ -25,6 +25,7 @@
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTask"
+            android:theme="@style/SplashTheme"
             android:screenOrientation="sensorLandscape"
             android:keepScreenOn="true"
             android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboard|keyboardHidden|navigation|uiMode|density">
@@ -50,5 +51,19 @@
                 <action android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
             </intent-filter>
         </receiver>
+
+        <!-- กดปิดข้อความเตือนของ AIS ให้อัตโนมัติ — เปิดใช้ด้วย ADB (ดู README) -->
+        <service
+            android:name=".AutoDismissService"
+            android:exported="false"
+            android:label="SC Signage: ปิดข้อความเตือนอัตโนมัติ"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/auto_dismiss" />
+        </service>
     </application>
 </manifest>

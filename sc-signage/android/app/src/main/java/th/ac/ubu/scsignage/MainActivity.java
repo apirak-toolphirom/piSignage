@@ -34,6 +34,7 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.EditText;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -95,6 +96,7 @@ public class MainActivity extends Activity {
         root.setBackgroundColor(Color.BLACK);
         setContentView(root);
         createWebView();
+        showSplash();
 
         String server = prefs.getString(KEY_SERVER, "");
         if (server.isEmpty()) {
@@ -150,6 +152,7 @@ public class MainActivity extends Activity {
             public void onPageFinished(WebView view, String url) {
                 pageLoadedAt = SystemClock.elapsedRealtime();
                 lastHeartbeat = pageLoadedAt;
+                handler.postDelayed(hideSplash, 1500); // ให้หน้าเล่นวาดเสร็จก่อนค่อยเอาโลโก้ออก
             }
 
             @TargetApi(23)
@@ -463,6 +466,28 @@ public class MainActivity extends Activity {
         super.onDestroy();
     }
 
+    // ---------- หน้าโลโก้ตอนเปิดแอป ----------
+    private ImageView splash;
+
+    private void showSplash() {
+        splash = new ImageView(this);
+        splash.setImageResource(R.drawable.splash_logo);
+        splash.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+        splash.setBackgroundColor(Color.WHITE);
+        root.addView(splash, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        // กันค้าง: ถ้าหน้าเล่นโหลดไม่ขึ้น เอาโลโก้ออกใน 30 วินาทีเพื่อให้เห็นข้อความแจ้งปัญหา
+        handler.postDelayed(hideSplash, 30_000);
+    }
+
+    private final Runnable hideSplash = new Runnable() {
+        @Override public void run() {
+            if (splash == null) return;
+            root.removeView(splash);
+            splash = null;
+        }
+    };
+
     private TextView message;
 
     private void showMessage(String text) {
@@ -477,6 +502,7 @@ public class MainActivity extends Activity {
         }
         message.setText(text);
         message.setVisibility(View.VISIBLE);
+        message.bringToFront(); // ข้อความแจ้งปัญหาต้องอยู่เหนือโลโก้
     }
 
     private void hideMessage() {

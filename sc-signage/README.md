@@ -88,6 +88,27 @@ ADMIN_PASS=รหัสผ่าน node server.js        # Windows: set ADMIN_P
 
 ไม่มีกล่อง Android? เปิด `http://<server>:3000/player/?id=ชื่อจอ` ในเบราว์เซอร์ของสมาร์ททีวีหรือ PC แบบเต็มจอได้ (ไม่มี snapshot และไม่เก็บสื่อไว้เล่นออฟไลน์)
 
+### กล่อง AIS Playbox (Inspur IPBS9210, Android 7.1)
+
+ทดสอบแล้วใช้ได้ (หน้าเล่น ES5 รันบน WebView 52 ของกล่องได้) — ขั้นตอนเฉพาะรุ่นนี้ผ่าน ADB:
+
+```
+adb install -r sc-signage.apk
+adb shell pm disable-user --user 0 com.ais.playbox          # ปิด launcher AIS → บูตเข้า SC Signage
+adb shell pm disable-user --user 0 com.inspur.httpupgrade   # ตัวอัปเดตเฟิร์มแวร์
+adb shell pm disable-user --user 0 com.inspur.tr069         # การจัดการระยะไกลของ AIS
+adb shell pm disable-user --user 0 com.wisdomvast.aiskaraoke
+adb shell pm disable-user --user 0 com.inspur.clingdlna     # กันคนแคสต์ภาพขึ้นจอ
+
+# กล่องที่ต่อ WiFi จะมีข้อความ "แนะนำให้ใช้สาย LAN" เด้งทับทุกครั้งที่บูต (มาจาก com.android.settings.ais
+# ซึ่งปิดจาก ADB ไม่ได้) → เปิดบริการปิดข้อความอัตโนมัติของแอป:
+adb shell settings put secure enabled_accessibility_services th.ac.ubu.scsignage/th.ac.ubu.scsignage.AutoDismissService
+adb shell settings put secure accessibility_enabled 1
+```
+
+ห้ามปิด `com.android.settings.ais` (หน้าตั้งค่า) และ `com.inspur.factory` · เปิดคืนแพ็กเกจใดๆ: `adb shell pm enable <ชื่อแพ็กเกจ>`
+โลโก้บูตของเฟิร์มแวร์ (AIS) เปลี่ยนไม่ได้ถ้าไม่ root — แอปจะแสดงโลโก้คณะทันทีที่เปิดจนหน้าเล่นพร้อม
+
 ## 3. เตรียมสื่อ
 
 ขนาดโซนตาม layout (จอ 1920×1080):
