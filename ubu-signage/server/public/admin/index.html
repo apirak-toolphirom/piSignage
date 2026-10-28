@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UBU Signage — จัดการจอประชาสัมพันธ์</title>
+<link rel="stylesheet" href="admin.css">
+</head>
+<body>
+<header>
+  <div class="brand">UBU Signage <small>ระบบจอประชาสัมพันธ์</small></div>
+  <nav>
+    <button data-tab="screens" class="active">จอ</button>
+    <button data-tab="playlists">Playlist</button>
+    <button data-tab="media">สื่อ</button>
+    <button data-tab="settings">ตั้งค่า</button>
+  </nav>
+</header>
+
+<main>
+  <!-- screens -->
+  <section id="tab-screens" class="tab active">
+    <div class="bar">
+      <h2>จอทั้งหมด <span id="screen-count" class="muted"></span></h2>
+      <button class="ghost" id="reload-all">สั่งรีโหลดทุกจอ</button>
+    </div>
+    <p class="hint">จอจะขึ้นที่นี่เองเมื่อเปิดแอปบนกล่อง Android แล้วชี้มาที่เซิร์ฟเวอร์นี้ จากนั้นกดที่จอเพื่อตั้งชื่อและเลือก playlist</p>
+    <div id="screen-list" class="cards"></div>
+  </section>
+
+  <!-- playlists -->
+  <section id="tab-playlists" class="tab">
+    <div class="split">
+      <aside>
+        <div class="bar"><h2>Playlist</h2><button id="pl-new">+ สร้าง</button></div>
+        <ul id="pl-list" class="list"></ul>
+      </aside>
+      <div id="pl-editor" class="panel"><p class="muted">เลือกหรือสร้าง playlist</p></div>
+    </div>
+  </section>
+
+  <!-- media -->
+  <section id="tab-media" class="tab">
+    <div class="bar"><h2>คลังสื่อ</h2></div>
+    <div class="upload-row">
+      <label id="drop" class="drop">
+        <input type="file" id="file-input" multiple accept="image/*,video/*" hidden>
+        <strong>ลากไฟล์มาวาง หรือกดเพื่อเลือก</strong>
+        <span class="muted">รูป JPG/PNG/WebP, วิดีโอ MP4 (H.264) — แนะนำ 1920×1080</span>
+        <div id="upload-progress" class="progress" hidden><div></div></div>
+      </label>
+      <form id="web-form" class="panel">
+        <strong>เพิ่มหน้าเว็บ</strong>
+        <input name="name" placeholder="ชื่อ เช่น ปฏิทินกิจกรรม">
+        <input name="url" placeholder="https://…" required>
+        <button>เพิ่ม</button>
+      </form>
+    </div>
+    <div id="media-grid" class="grid"></div>
+  </section>
+
+  <!-- settings -->
+  <section id="tab-settings" class="tab">
+    <form id="settings-form" class="panel narrow">
+      <h2>ข้อความวิ่งด้านล่างจอ (ทุกจอ)</h2>
+      <textarea name="tickerText" rows="3" placeholder="เช่น ขอเชิญร่วมงาน…"></textarea>
+      <label class="check"><input type="checkbox" name="tickerEnabled"> แสดงข้อความวิ่ง</label>
+      <label>ความเร็ว (พิกเซล/วินาที) <input type="number" name="tickerSpeed" min="20" max="400"></label>
+      <p class="hint">ถ้าจอไหนตั้งข้อความวิ่งของตัวเองไว้ จะใช้ข้อความของจอนั้นแทน</p>
+      <button>บันทึก</button>
+    </form>
+    <div class="panel narrow">
+      <h2>การเชื่อมต่อจอ</h2>
+      <p>ในแอป Android ให้ใส่ที่อยู่เซิร์ฟเวอร์:</p>
+      <code id="server-url"></code>
+      <p class="hint">เปิดในเบราว์เซอร์ (เช่น สมาร์ททีวี/PC) ได้ที่ <code id="browser-url"></code></p>
+    </div>
+  </section>
+</main>
+
+<dialog id="screen-dialog"></dialog>
+<div id="toast"></div>
+<script src="admin.js"></script>
+</body>
+</html>
