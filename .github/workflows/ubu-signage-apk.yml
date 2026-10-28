@@ -51,15 +51,15 @@ jobs:
         run: gradle assembleRelease --no-daemon
 
       - name: Rename APK
-        run: cp ubu-signage/android/app/build/outputs/apk/release/app-release.apk ubu-signage.apk
+        run: cp ubu-signage/android/app/build/outputs/apk/release/app-release.apk sc-signage.apk
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ubu-signage-apk
-          path: ubu-signage.apk
+          name: sc-signage-apk
+          path: sc-signage.apk
 
       - name: Publish release (on tag)
         if: startsWith(github.ref, 'refs/tags/signage-v')
         uses: softprops/action-gh-release@v2
         with:
-          files: ubu-signage.apk
+          files: sc-signage.apk
