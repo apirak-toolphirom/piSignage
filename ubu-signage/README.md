@@ -1,25 +1,36 @@
-# UBU Signage — ระบบจอประชาสัมพันธ์ในวง LAN
+# UBU Signage — ระบบจอประชาสัมพันธ์ในวง LAN (แนวทางเดียวกับ piSignage)
 
 ระบบ digital signage แบบ local ไม่มีค่าไลเซนส์ ใช้กล่อง Android เป็นเครื่องเล่น เหมาะกับจอ 5–10 จอในห้องประชุมและห้องเรียน
+ลำดับการใช้งานเหมือน piSignage:
+
+```
+1. Assets      อัปโหลดรูป / วิดีโอ / HTML (.zip) / ลิงก์เว็บ / สร้างประกาศข้อความ
+2. Playlists   เลือก layout (1 โซน – 3 โซน), ใส่ asset ลงโซน main / side / bottom, ตั้งเวลาแต่ละชิ้น, ข้อความวิ่ง
+3. Groups      ผูกจอเข้ากลุ่ม (เช่น ห้องประชุม, ห้องเรียน), เลือก playlist + ตารางเวลา, เวลาเปิด/ปิดจอ, การหมุนจอ
+               → กด "Deploy" จอในกลุ่มจึงได้รับเนื้อหาใหม่
+4. แดชบอร์ด   ดูจอออนไลน์, กำลังเล่นอะไร, ภาพหน้าจอจริง, สั่งรีโหลด
+```
 
 ```
 [ เซิร์ฟเวอร์ (PC / VM / Raspberry Pi) ]  ←— LAN —→  [ กล่อง Android + จอ ] × N
-   /admin  จัดการสื่อ, playlist, ตารางเวลา              แอป UBU Signage (เต็มจอ, เปิดเองตอนบูต)
-   /player หน้าเล่นสำหรับจอ                             เก็บสื่อไว้ในเครื่อง เล่นต่อได้แม้เน็ตหลุด
+   /admin   หน้าจัดการ                                  แอป UBU Signage: เต็มจอ, เปิดเองตอนบูต,
+   /player  หน้าเล่นสำหรับจอ                             เก็บสื่อในเครื่อง เล่นต่อได้แม้เน็ตหลุด
 ```
 
-## ความสามารถ
+## เทียบกับ piSignage
 
-- อัปโหลดรูป/วิดีโอ (ลากวางได้หลายไฟล์) และเพิ่มหน้าเว็บเป็นสไลด์
-- Playlist: กำหนดเวลาแสดงแต่ละชิ้น, พอดีจอ/เต็มจอ, ปิดเสียงวิดีโอ, เรียงลำดับ
-- ตารางเวลาต่อจอ: เลือกวันในสัปดาห์ ช่วงเวลา และช่วงวันที่ (เช่น งานประชุมเฉพาะวัน) — รายการบนสุดมีสิทธิ์ก่อน นอกเวลาใช้ playlist หลัก
-- จัดกลุ่มจอ (เช่น "ห้องประชุม", "ห้องเรียน") และคัดลอกการตั้งค่าไปทั้งกลุ่ม
-- ข้อความวิ่งด้านล่าง: ข้อความรวมทุกจอ หรือเฉพาะจอ
-- หมุนจอ 90/180/270° สำหรับจอแนวตั้ง
-- ดูสถานะออนไลน์ของแต่ละจอ, สั่งรีโหลดจอจากหน้า admin
-- จอใหม่ลงทะเบียนเองอัตโนมัติเมื่อแอปเชื่อมต่อครั้งแรก
-- ออฟไลน์: กล่องเก็บ playlist ล่าสุดและไฟล์สื่อไว้ในเครื่อง ถ้าเซิร์ฟเวอร์หรือเน็ตล่มก็ยังเล่นต่อ
-- แอปมี watchdog: หน้าเล่นค้างหรือ WebView crash จะโหลดใหม่เอง และรีเฟรชทุก 24 ชม.
+| piSignage | UBU Signage |
+|---|---|
+| Assets: รูป, วิดีโอ, ลิงก์, HTML zip, notice | ✔ ครบ + วันเริ่ม/วันหมดอายุของ asset (จอข้ามเองตามวันที่) |
+| Layout 1, 2a–2d, 3a–3d, 4a–4d, แนวตั้ง | ✔ ขนาดโซนเท่ากับของ piSignage (+ 2bp แนวตั้ง) |
+| Asset หลายโซนต่อแถว (main/side/bottom) | ✔ |
+| Ticker ใน playlist | ✔ |
+| Groups + ตารางเวลา playlist + Deploy | ✔ (แก้ไขแล้วยังไม่ส่งจอจนกว่าจะ Deploy, มีแถบเตือน "รอ deploy") |
+| TV on/off ตามเวลา + วันพิเศษ | ✔ จอดำ/ลดแสง (ปิดทีวีจริงต้องใช้ HDMI-CEC ซึ่งแอปทั่วไปบน Android สั่งไม่ได้) |
+| Emergency message / playlist ทุกจอ | ✔ มีผลทันทีไม่ต้อง Deploy |
+| Dashboard + snapshot หน้าจอ | ✔ (snapshot เฉพาะแอป Android) |
+| Ads playlist, domination, reports, piShell, หลายผู้ใช้ | ✘ ยังไม่มี |
+| ค่าไลเซนส์ต่อจอ | ไม่มี |
 
 ## 1. ติดตั้งเซิร์ฟเวอร์
 
@@ -48,71 +59,77 @@ npm install
 ADMIN_PASS=รหัสผ่าน node server.js        # Windows: set ADMIN_PASS=รหัสผ่าน && node server.js
 ```
 
-เปิด `http://<IP เซิร์ฟเวอร์>:3000/admin` ผู้ใช้ `admin`
+เปิด `http://<IP เซิร์ฟเวอร์>:3000/admin/` ผู้ใช้ `admin`
 
 | ตัวแปร | ค่าเริ่มต้น | ความหมาย |
 |---|---|---|
 | `PORT` | 3000 | พอร์ต |
 | `ADMIN_USER` / `ADMIN_PASS` | admin / admin1234 | บัญชีหน้า admin (ควรเปลี่ยน) |
-| `DATA_DIR` | `server/data` | ที่เก็บ `db.json` และไฟล์สื่อ — สำรองโฟลเดอร์นี้โฟลเดอร์เดียวพอ |
+| `DATA_DIR` | `server/data` | ที่เก็บ `db.json`, `media/`, `snapshots/` — สำรองโฟลเดอร์นี้โฟลเดอร์เดียวพอ |
 | `MAX_UPLOAD_MB` | 2048 | ขนาดไฟล์อัปโหลดสูงสุด |
+
+อัปเกรดจากเวอร์ชันแรก: เซิร์ฟเวอร์แปลงข้อมูลให้เองตอนเปิด (สำรองไว้ที่ `db.json.v1-backup`) — จอเดิมถูกจัดเข้ากลุ่มตามชื่อกลุ่มเดิมและ Deploy ให้อัตโนมัติ
 
 ## 2. ติดตั้งแอปบนกล่อง Android
 
-1. ดาวน์โหลด `ubu-signage.apk` จากแท็บ **Actions** ของ repo (หรือจาก Releases ถ้าติด tag `signage-v1.0.0`)
+1. ดาวน์โหลด `ubu-signage.apk` จากแท็บ **Actions** ของ repo (หรือ Releases ถ้าติด tag `signage-v1.1.0`)
 2. ติดตั้งบนกล่อง (เปิด "ติดตั้งแอปจากแหล่งที่ไม่รู้จัก" ก่อน)
 3. เปิดแอป → ใส่ที่อยู่เซิร์ฟเวอร์ เช่น `http://192.168.1.10:3000` → บันทึก
-4. จอจะขึ้นในหน้า admin แท็บ "จอ" — ตั้งชื่อ กลุ่ม และเลือก playlist
+4. จอขึ้นในแดชบอร์ด อยู่กลุ่ม "ค่าเริ่มต้น" — กด "แก้ไข" เพื่อตั้งชื่อและย้ายกลุ่ม
 
 ตั้งค่ากล่องให้เหมาะกับงาน signage:
 
-- **ตั้ง UBU Signage เป็นหน้า Home** (กดปุ่ม Home แล้วเลือก UBU Signage → "ทุกครั้ง") วิธีนี้เปิดเองหลังบูตได้ชัวร์ที่สุด
+- **ตั้ง UBU Signage เป็นหน้า Home** (กดปุ่ม Home แล้วเลือก UBU Signage → "ทุกครั้ง") เปิดเองหลังบูตได้ชัวร์ที่สุด
 - Android 10 ขึ้นไป: อนุญาต "แสดงทับแอปอื่น" ตามที่แอปถาม ถ้าไม่ได้ตั้งเป็น Home
-- ปิดโหมดพักหน้าจอ/screensaver ของกล่อง
-- ตั้งเขตเวลาเป็น **Asia/Bangkok** — ตารางเวลาคิดตามนาฬิกาของกล่อง
-- ใช้สาย LAN ถ้าทำได้ เสถียรกว่า Wi-Fi
+- ปิด screensaver/โหมดพักของกล่อง, ตั้งเขตเวลา **Asia/Bangkok** (ตารางเวลาคิดตามนาฬิกากล่อง)
+- ใช้สาย LAN ถ้าทำได้
 
-ปุ่มรีโมท: กด **BACK 5 ครั้งเร็วๆ** หรือ **MENU** = เปิดหน้าตั้งค่า, **OK** = แสดงข้อมูลจอ (ID, สถานะ) · จอสัมผัส: แตะมุมซ้ายบน 5 ครั้ง
+ปุ่มรีโมท: **BACK 5 ครั้งเร็วๆ** หรือ **MENU** = หน้าตั้งค่า, **OK** = ข้อมูลจอ (ID, กลุ่ม, กำลังเล่น, deploy ล่าสุด) · จอสัมผัส: แตะมุมซ้ายบน 5 ครั้ง
 
-ไม่มีกล่อง Android? เปิด `http://<server>:3000/player/?id=ชื่อจอ` ในเบราว์เซอร์ของสมาร์ททีวีหรือ PC แบบเต็มจอได้ (แต่ไม่เก็บไฟล์สื่อไว้เล่นออฟไลน์)
+ไม่มีกล่อง Android? เปิด `http://<server>:3000/player/?id=ชื่อจอ` ในเบราว์เซอร์ของสมาร์ททีวีหรือ PC แบบเต็มจอได้ (ไม่มี snapshot และไม่เก็บสื่อไว้เล่นออฟไลน์)
 
 ## 3. เตรียมสื่อ
 
-- รูป: JPG/PNG/WebP ขนาด 1920×1080 (จอแนวตั้ง 1080×1920)
-- วิดีโอ: MP4 (H.264 + AAC) ไม่เกิน 1080p — กล่องราคาประหยัดหลายรุ่นเล่น 4K/H.265 ได้ไม่ลื่น
-  แปลงด้วย ffmpeg: `ffmpeg -i in.mov -c:v libx264 -preset veryfast -crf 23 -vf scale=-2:1080 -c:a aac out.mp4`
-- หน้าเว็บ: บางเว็บห้ามฝังใน iframe (จะขึ้นหน้าว่าง) — ทดสอบด้วยปุ่ม "ดูตัวอย่าง" ในหน้าจอนั้น
-- ระยะเวลา 0 กับวิดีโอ = เล่นจนจบ
+ขนาดโซนตาม layout (จอ 1920×1080):
+
+| โซน | layout 2a/2b | 3a/3b/3c/3d | 4a–4d |
+|---|---|---|---|
+| main | 1440×1080 | 1440×810 | 1440×810 |
+| side | 480×1080 | 480×810 | 480×1080 |
+| bottom | — | 1920×270 | 1440×270 |
+
+- รูป: JPG/PNG/WebP · วิดีโอ: MP4 (H.264 + AAC) ไม่เกิน 1080p — กล่องราคาประหยัดหลายรุ่นเล่น 4K/H.265 ไม่ลื่น
+  `ffmpeg -i in.mov -c:v libx264 -preset veryfast -crf 23 -vf scale=-2:1080 -c:a aac out.mp4`
+- HTML: zip ทั้งโฟลเดอร์ที่มี `index.html` แล้วอัปโหลด — ใช้วิดเจ็ตในโฟลเดอร์ `examples/` ของ repo นี้ได้ (นาฬิกา, countdown ฯลฯ)
+- ลิงก์เว็บ: บางเว็บห้ามฝังใน iframe (ขึ้นหน้าว่าง) — ทดสอบด้วย "ดูตัวอย่าง" ในแดชบอร์ด
+- ระยะเวลา 0 กับวิดีโอ = เล่นจนจบ · วิดีโอในโซน side/bottom เล่นวนแบบปิดเสียง
 
 ## 4. Build APK เอง
 
 GitHub Actions (`.github/workflows/ubu-signage-apk.yml`) build ให้อัตโนมัติเมื่อ push โค้ดใน `ubu-signage/android/`
-build ในเครื่อง: เปิดโฟลเดอร์ `ubu-signage/android` ด้วย Android Studio แล้ว Build → Build APK, หรือ `gradle assembleRelease`
+หรือเปิด `ubu-signage/android` ด้วย Android Studio → Build APK / `gradle assembleRelease`
 
-APK เซ็นด้วยคีย์ใน `android/keystore/` เพื่อให้ติดตั้งเวอร์ชันใหม่ทับได้โดยไม่ต้องถอนแอป
-ถ้า repo เป็น public แนะนำสร้างคีย์ใหม่ (`keytool -genkeypair ...`) แล้วใส่รหัสผ่านใน GitHub Secrets
-`SIGNING_STORE_PASSWORD`, `SIGNING_KEY_ALIAS`, `SIGNING_KEY_PASSWORD`
+APK เซ็นด้วยคีย์ใน `android/keystore/` เพื่อให้ติดตั้งเวอร์ชันใหม่ทับได้ ถ้า repo เป็น public แนะนำสร้างคีย์ใหม่
+แล้วใส่รหัสผ่านใน GitHub Secrets `SIGNING_STORE_PASSWORD`, `SIGNING_KEY_ALIAS`, `SIGNING_KEY_PASSWORD`
 
 ## โครงสร้าง
 
 ```
 ubu-signage/
 ├─ server/
-│  ├─ server.js              API + เสิร์ฟหน้า admin/player
-│  ├─ public/admin/          หน้าจัดการ (ภาษาไทย)
+│  ├─ server.js              API, deploy, layout, migration
+│  ├─ public/admin/          หน้าจัดการ (แดชบอร์ด / Assets / Playlists / Groups / ตั้งค่า)
 │  ├─ public/player/         หน้าเล่น (ES5 รองรับ WebView รุ่นเก่า)
-│  ├─ install-ubuntu.sh, Dockerfile, docker-compose.yml
-│  └─ data/                  db.json + media/ (สร้างอัตโนมัติ)
-└─ android/                  แอป kiosk (Java, minSdk 21 = Android 5+)
+│  └─ install-ubuntu.sh, Dockerfile, docker-compose.yml
+└─ android/                  แอป kiosk (Java, Android 5+)
    └─ app/src/main/java/th/ac/ubu/signage/
-      ├─ MainActivity.java   WebView เต็มจอ, ตั้งค่า, watchdog
-      ├─ MediaCache.java     เก็บสื่อ/หน้าเล่นไว้ในเครื่อง (รองรับ Range สำหรับวิดีโอ)
+      ├─ MainActivity.java   WebView เต็มจอ, ตั้งค่า, watchdog, snapshot, ลดแสงตอนปิดจอ
+      ├─ MediaCache.java     เก็บสื่อ/หน้าเล่นในเครื่อง (รองรับ Range สำหรับวิดีโอ)
       └─ BootReceiver.java   เปิดแอปเมื่อบูต
 ```
 
 ## API (สำหรับต่อยอด)
 
-ฝั่งจอ (ไม่ต้องล็อกอิน): `GET /api/player/:screenId` คืน config ทั้งหมดที่จอนั้นต้องใช้
-ฝั่ง admin (Basic Auth) ที่ `/api/admin/…`: `state`, `media` (POST multipart `files`), `media/web`, `playlists`, `screens/:id`, `screens/:id/copy`, `screens/:id|all/reload`, `settings`
-
-ตัวอย่าง layout HTML ในโฟลเดอร์ `examples/` ของ repo (นาฬิกา, อากาศ, countdown ฯลฯ) นำไปเปิดผ่านเว็บเซิร์ฟเวอร์ใดก็ได้แล้วเพิ่มเป็น "หน้าเว็บ" ใน playlist
+ฝั่งจอ (ไม่ต้องล็อกอิน): `GET /api/player/:id` คืนเนื้อหาที่ deploy ให้กลุ่มของจอ, `POST /api/player/:id/snapshot` (image/jpeg)
+ฝั่ง admin (Basic Auth) ที่ `/api/admin/…`: `state`, `assets` (multipart `files`), `assets/web`, `assets/notice`, `playlists`, `playlists/:id/copy`,
+`groups`, `groups/:id|all/deploy`, `players/:id`, `players/:id|all/reload|snapshot`, `snapshot/:id`, `settings` (emergency)

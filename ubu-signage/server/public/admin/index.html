@@ -10,75 +10,101 @@
 <header>
   <div class="brand">UBU Signage <small>ระบบจอประชาสัมพันธ์</small></div>
   <nav>
-    <button data-tab="screens" class="active">จอ</button>
-    <button data-tab="playlists">Playlist</button>
-    <button data-tab="media">สื่อ</button>
+    <button data-tab="dashboard" class="active">แดชบอร์ด</button>
+    <button data-tab="assets">Assets</button>
+    <button data-tab="playlists">Playlists</button>
+    <button data-tab="groups">Groups</button>
     <button data-tab="settings">ตั้งค่า</button>
   </nav>
 </header>
+<div id="banner"></div>
 
 <main>
-  <!-- screens -->
-  <section id="tab-screens" class="tab active">
+  <!-- dashboard / players -->
+  <section id="tab-dashboard" class="tab active">
+    <div class="stats" id="stats"></div>
     <div class="bar">
-      <h2>จอทั้งหมด <span id="screen-count" class="muted"></span></h2>
-      <button class="ghost" id="reload-all">สั่งรีโหลดทุกจอ</button>
+      <h2>จอ (Players)</h2>
+      <div class="btns">
+        <button class="ghost" id="snap-all">ขอภาพหน้าจอทุกจอ</button>
+        <button class="ghost" id="reload-all">รีโหลดทุกจอ</button>
+      </div>
     </div>
-    <p class="hint">จอจะขึ้นที่นี่เองเมื่อเปิดแอปบนกล่อง Android แล้วชี้มาที่เซิร์ฟเวอร์นี้ จากนั้นกดที่จอเพื่อตั้งชื่อและเลือก playlist</p>
-    <div id="screen-list" class="cards"></div>
+    <p class="hint">จอใหม่จะขึ้นที่นี่เองเมื่อเปิดแอปบนกล่อง Android แล้วชี้มาที่เซิร์ฟเวอร์นี้ และเข้ากลุ่ม "ค่าเริ่มต้น" ก่อน — กด "แก้ไข" เพื่อย้ายกลุ่ม</p>
+    <div id="player-list" class="cards"></div>
+  </section>
+
+  <!-- assets -->
+  <section id="tab-assets" class="tab">
+    <div class="upload-row">
+      <label id="drop" class="drop">
+        <input type="file" id="file-input" multiple accept="image/*,video/*,.zip" hidden>
+        <strong>ลากไฟล์มาวาง หรือกดเพื่อเลือก</strong>
+        <span class="muted">รูป JPG/PNG/WebP · วิดีโอ MP4 (H.264) · เว็บ/วิดเจ็ต HTML เป็นไฟล์ .zip</span>
+        <div id="upload-progress" class="progress" hidden><div></div></div>
+      </label>
+      <div class="panel">
+        <form id="web-form" class="stack">
+          <strong>เพิ่มลิงก์เว็บ</strong>
+          <input name="name" placeholder="ชื่อ เช่น ปฏิทินกิจกรรม">
+          <input name="url" placeholder="https://…" required>
+          <button>เพิ่มลิงก์</button>
+        </form>
+        <button class="ghost" id="new-notice">+ สร้างประกาศข้อความ (Notice)</button>
+      </div>
+    </div>
+    <div class="bar">
+      <h2>Assets <span id="asset-count" class="muted"></span></h2>
+      <select id="asset-filter" style="width:auto">
+        <option value="">ทุกประเภท</option><option value="image">รูป</option><option value="video">วิดีโอ</option>
+        <option value="web">ลิงก์เว็บ</option><option value="html">HTML (zip)</option><option value="notice">ประกาศ</option>
+      </select>
+    </div>
+    <div id="asset-grid" class="grid"></div>
   </section>
 
   <!-- playlists -->
   <section id="tab-playlists" class="tab">
     <div class="split">
       <aside>
-        <div class="bar"><h2>Playlist</h2><button id="pl-new">+ สร้าง</button></div>
+        <div class="bar"><h2>Playlists</h2><button id="pl-new">+ สร้าง</button></div>
         <ul id="pl-list" class="list"></ul>
       </aside>
       <div id="pl-editor" class="panel"><p class="muted">เลือกหรือสร้าง playlist</p></div>
     </div>
   </section>
 
-  <!-- media -->
-  <section id="tab-media" class="tab">
-    <div class="bar"><h2>คลังสื่อ</h2></div>
-    <div class="upload-row">
-      <label id="drop" class="drop">
-        <input type="file" id="file-input" multiple accept="image/*,video/*" hidden>
-        <strong>ลากไฟล์มาวาง หรือกดเพื่อเลือก</strong>
-        <span class="muted">รูป JPG/PNG/WebP, วิดีโอ MP4 (H.264) — แนะนำ 1920×1080</span>
-        <div id="upload-progress" class="progress" hidden><div></div></div>
-      </label>
-      <form id="web-form" class="panel">
-        <strong>เพิ่มหน้าเว็บ</strong>
-        <input name="name" placeholder="ชื่อ เช่น ปฏิทินกิจกรรม">
-        <input name="url" placeholder="https://…" required>
-        <button>เพิ่ม</button>
-      </form>
+  <!-- groups -->
+  <section id="tab-groups" class="tab">
+    <div class="split">
+      <aside>
+        <div class="bar"><h2>Groups</h2><button id="grp-new">+ สร้าง</button></div>
+        <ul id="grp-list" class="list"></ul>
+        <button class="ghost" id="deploy-all" style="width:100%;margin-top:10px">Deploy ทุกกลุ่ม</button>
+      </aside>
+      <div id="grp-editor" class="panel"><p class="muted">เลือกกลุ่ม</p></div>
     </div>
-    <div id="media-grid" class="grid"></div>
   </section>
 
   <!-- settings -->
   <section id="tab-settings" class="tab">
-    <form id="settings-form" class="panel narrow">
-      <h2>ข้อความวิ่งด้านล่างจอ (ทุกจอ)</h2>
-      <textarea name="tickerText" rows="3" placeholder="เช่น ขอเชิญร่วมงาน…"></textarea>
-      <label class="check"><input type="checkbox" name="tickerEnabled"> แสดงข้อความวิ่ง</label>
-      <label>ความเร็ว (พิกเซล/วินาที) <input type="number" name="tickerSpeed" min="20" max="400"></label>
-      <p class="hint">ถ้าจอไหนตั้งข้อความวิ่งของตัวเองไว้ จะใช้ข้อความของจอนั้นแทน</p>
+    <form id="emergency-form" class="panel narrow danger-panel">
+      <h2>ประกาศฉุกเฉิน (Emergency)</h2>
+      <p class="hint">แสดงทันทีบน<b>ทุกจอทุกกลุ่ม</b> ไม่ต้อง Deploy และเปิดจอแม้อยู่ในช่วงปิดจอ — ปิดสวิตช์เมื่อเลิกประกาศ</p>
+      <textarea name="message" rows="3" placeholder="เช่น ขอให้ทุกท่านอพยพออกจากอาคารทางบันไดหนีไฟ"></textarea>
+      <label>หรือเล่น playlist ฉุกเฉินแทนข้อความ <select name="playlistId"></select></label>
+      <label class="check"><input type="checkbox" name="enabled"> เปิดประกาศฉุกเฉิน</label>
       <button>บันทึก</button>
     </form>
     <div class="panel narrow">
       <h2>การเชื่อมต่อจอ</h2>
-      <p>ในแอป Android ให้ใส่ที่อยู่เซิร์ฟเวอร์:</p>
-      <code id="server-url"></code>
-      <p class="hint">เปิดในเบราว์เซอร์ (เช่น สมาร์ททีวี/PC) ได้ที่ <code id="browser-url"></code></p>
+      <p>ในแอป Android ให้ใส่ที่อยู่เซิร์ฟเวอร์: <code id="server-url"></code></p>
+      <p class="hint">เปิดในเบราว์เซอร์ (สมาร์ททีวี/PC) ได้ที่ <code id="browser-url"></code></p>
     </div>
   </section>
 </main>
 
-<dialog id="screen-dialog"></dialog>
+<dialog id="dlg"></dialog>
 <div id="toast"></div>
 <script src="admin.js"></script>
 </body>

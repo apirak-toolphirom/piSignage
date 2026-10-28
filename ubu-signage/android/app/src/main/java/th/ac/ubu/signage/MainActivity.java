@@ -7,6 +7,7 @@ import android.app.AlertDialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
+import android.graphics.Canvas;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
@@ -18,6 +19,7 @@ import android.provider.Settings;
 import android.text.InputType;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
+import android.view.PixelCopy;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
@@ -36,7 +38,13 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.io.ByteArrayOutputStream;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.Locale;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Full-screen kiosk that shows the UBU Signage player page.
@@ -52,6 +60,7 @@ public class MainActivity extends Activity {
     private static final long WATCHDOG_MS = 30_000;
     private static final long HEARTBEAT_TIMEOUT_MS = 120_000;
     private static final long DAILY_RELOAD_MS = 24L * 60 * 60 * 1000;
+    private static final long SNAPSHOT_MS = 10L * 60 * 1000;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private FrameLayout root;
@@ -63,6 +72,8 @@ public class MainActivity extends Activity {
     private volatile long lastHeartbeat = 0;
     private long pageLoadedAt = 0;
     private boolean settingsOpen = false;
+    private boolean screenOn = true;
+    private final ExecutorService io = Executors.newSingleThreadExecutor();
     private int secretCount = 0;
     private long secretStart = 0;
 
@@ -93,6 +104,7 @@ public class MainActivity extends Activity {
             loadPlayer();
         }
         handler.postDelayed(watchdog, WATCHDOG_MS);
+        handler.postDelayed(periodicSnapshot, 60_000);
     }
 
     @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
@@ -209,9 +221,81 @@ public class MainActivity extends Activity {
     private class Bridge {
         @JavascriptInterface public void heartbeat() { lastHeartbeat = SystemClock.elapsedRealtime(); }
         @JavascriptInterface public void prefetch(String jsonUrls) { cache.prefetch(jsonUrls); }
+        @JavascriptInterface public void snapshot() { handler.post(MainActivity.this::captureSnapshot); }
+        @JavascriptInterface public void setScreenOn(final boolean on) { handler.post(() -> applyScreenOn(on)); }
         @JavascriptInterface public String screenId() { return screenId; }
         @JavascriptInterface public String version() { return appVersion; }
     }
+
+    // ------------------------------------------------------------ TV on/off
+    /**
+     * Group TV-off times: the page already shows black; here we also drop the backlight to minimum.
+     * Turning the TV itself off needs HDMI-CEC, which ordinary Android apps cannot control.
+     */
+    private void applyScreenOn(boolean on) {
+        WindowManager.LayoutParams lp = getWindow().getAttributes();
+        lp.screenBrightness = on ? WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE : 0.01f;
+        getWindow().setAttributes(lp);
+        screenOn = on;
+    }
+
+    // ------------------------------------------------------------ snapshots (shown on the dashboard)
+    private void captureSnapshot() {
+        final int w = root.getWidth(), h = root.getHeight();
+        if (w <= 0 || h <= 0 || !screenOn) return;
+        final Bitmap full = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+        if (Build.VERSION.SDK_INT >= 26) {
+            try {
+                // PixelCopy reads what is really on screen, including video
+                PixelCopy.request(getWindow(), full, (int result) -> {
+                    if (result == PixelCopy.SUCCESS) uploadSnapshot(full);
+                    else drawSnapshot(full);
+                }, handler);
+                return;
+            } catch (Exception ignored) { }
+        }
+        drawSnapshot(full);
+    }
+
+    private void drawSnapshot(Bitmap full) {
+        try {
+            root.draw(new Canvas(full));
+            uploadSnapshot(full);
+        } catch (Exception ignored) { }
+    }
+
+    private void uploadSnapshot(final Bitmap full) {
+        final String server = prefs.getString(KEY_SERVER, "");
+        if (server.isEmpty()) return;
+        io.execute(() -> {
+            try {
+                int tw = 640, th = Math.max(1, full.getHeight() * tw / Math.max(1, full.getWidth()));
+                Bitmap small = Bitmap.createScaledBitmap(full, tw, th, true);
+                ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                small.compress(Bitmap.CompressFormat.JPEG, 70, bos);
+                small.recycle();
+                full.recycle();
+                HttpURLConnection c = (HttpURLConnection) new URL(server + "/api/player/" + Uri.encode(screenId) + "/snapshot").openConnection();
+                c.setConnectTimeout(8000);
+                c.setReadTimeout(15000);
+                c.setDoOutput(true);
+                c.setRequestMethod("POST");
+                c.setRequestProperty("Content-Type", "image/jpeg");
+                OutputStream os = c.getOutputStream();
+                os.write(bos.toByteArray());
+                os.close();
+                c.getResponseCode();
+                c.disconnect();
+            } catch (Exception ignored) { }
+        });
+    }
+
+    private final Runnable periodicSnapshot = new Runnable() {
+        @Override public void run() {
+            if (!settingsOpen && pageLoadedAt > 0) captureSnapshot();
+            handler.postDelayed(this, SNAPSHOT_MS);
+        }
+    };
 
     // ------------------------------------------------------------ settings
     private void openSettings() {
@@ -374,6 +458,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onDestroy() {
         handler.removeCallbacksAndMessages(null);
+        io.shutdownNow();
         if (web != null) web.destroy();
         super.onDestroy();
     }

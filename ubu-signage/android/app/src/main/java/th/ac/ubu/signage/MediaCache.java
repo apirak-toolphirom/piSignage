@@ -40,7 +40,7 @@ public class MediaCache {
     private static final String TAG = "UbuCache";
     private static final long MIN_FREE_BYTES = 300L * 1024 * 1024;
     private static final Pattern RANGE = Pattern.compile("bytes=(\\d*)-(\\d*)");
-    private static final Pattern SAFE_NAME = Pattern.compile("^[A-Za-z0-9._-]{1,80}$");
+    private static final Pattern SAFE_NAME = Pattern.compile("^[A-Za-z0-9._-]{1,160}$");
 
     private final File mediaDir;
     private final File pageDir;
@@ -81,15 +81,23 @@ public class MediaCache {
         return null;
     }
 
+    /** Local file name for a /media/... URL; sub folders are flattened ("html/a1/x.js" -> "html_a1_x.js"). */
+    static String mediaKey(Uri u) {
+        String p = u.getPath();
+        if (p == null || !p.startsWith("/media/")) return null;
+        String k = p.substring(7).replaceAll("[^A-Za-z0-9._-]", "_");
+        return k.isEmpty() || k.length() > 160 || k.startsWith(".") ? null : k;
+    }
+
     private WebResourceResponse serveMedia(Uri u, Map<String, String> headers) throws IOException {
-        String name = u.getLastPathSegment();
+        String name = mediaKey(u);
         if (name == null || !SAFE_NAME.matcher(name).matches()) return null;
         File f = new File(mediaDir, name);
         if (!f.isFile()) {
             enqueue(u.toString(), name);
             return null; // stream from the network this time
         }
-        String mime = mimeOf(name);
+        String mime = mimeOf(u.getLastPathSegment() == null ? name : u.getLastPathSegment());
         long len = f.length();
         String range = null;
         if (headers != null) {
@@ -164,23 +172,33 @@ public class MediaCache {
             Set<String> keep = new HashSet<>();
             for (int i = 0; i < arr.length(); i++) {
                 Uri u = Uri.parse(arr.getString(i));
-                String name = u.getLastPathSegment();
+                String name = mediaKey(u);
                 if (name == null || !SAFE_NAME.matcher(name).matches() || !isOurServer(u)) continue;
                 keep.add(name);
                 if (!new File(mediaDir, name).isFile()) enqueue(u.toString(), name);
             }
+            // files of an HTML asset (its css/js/images are cached on first use) stay with their entry page
+            Set<String> keepPrefixes = new HashSet<>();
+            for (String k : keep) { String pre = htmlPrefix(k); if (pre != null) keepPrefixes.add(pre); }
             // drop files no playlist of this screen uses any more
             File[] files = mediaDir.listFiles();
             if (files != null) {
                 for (File f : files) {
                     String n = f.getName();
                     if (n.endsWith(".part")) continue;
-                    if (!keep.contains(n) && !pending.contains(n)) f.delete();
+                    if (!keep.contains(n) && !pending.contains(n) && !keepPrefixes.contains(htmlPrefix(n))) f.delete();
                 }
             }
         } catch (Exception e) {
             Log.w(TAG, "prefetch failed", e);
         }
+    }
+
+    /** "html_<assetId>_" for files of an HTML asset, otherwise null. */
+    private static String htmlPrefix(String key) {
+        if (!key.startsWith("html_")) return null;
+        int i = key.indexOf('_', 5);
+        return i > 5 ? key.substring(0, i + 1) : null;
     }
 
     public void clear() {

@@ -10,8 +10,8 @@ android {
         applicationId 'th.ac.ubu.signage'
         minSdk 21          // Android 5.0+ (covers old TV boxes)
         targetSdk 34
-        versionCode 1
-        versionName '1.0.0'
+        versionCode 2
+        versionName '1.1.0'
     }
 
     // Fixed key so new APK versions install over old ones without uninstalling.
