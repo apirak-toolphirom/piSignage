@@ -167,3 +167,12 @@ dialog .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .tile .badges .tag { color: var(--ink); background: var(--card); }
 .section .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 @media (max-width: 560px) { .section .row { grid-template-columns: 1fr; } }
+
+/* ขนาดสื่อแนะนำ + ปรับขนาดโซน (เพิ่ม 29 ต.ค.) */
+.pxbox { margin-top: 12px; font-size: 13px; color: var(--muted, #5d6578); line-height: 1.9; }
+.pxbox .pxhint { display: inline-block; background: var(--code-bg, #eef1f6); border: 1px solid var(--line, #e2e5ea); border-radius: 6px; padding: 1px 8px; margin: 0 2px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.resize { margin-top: 14px; padding: 12px 14px; border: 1px solid var(--line, #e2e5ea); border-radius: 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 20px; }
+.resize strong { width: 100%; }
+.resize label { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.resize input[type=range] { width: 160px; }
+.resize b { font-variant-numeric: tabular-nums; min-width: 42px; }

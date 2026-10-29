@@ -274,11 +274,18 @@
   var zones = { main: new Zone('main'), side: new Zone('side'), bottom: new Zone('bottom') };
   var currentLayout = '';
 
-  function setLayout(name) {
+  // คืนพิกัดโซนของ playlist: ใช้ค่าที่ปรับขนาดแล้ว (pl.zones) ถ้ามี ไม่งั้นใช้ตาม layout
+  function zonesOf(pl) {
+    if (pl && pl.zones) return pl.zones;
     var layouts = (cfg && cfg.content && cfg.content.layouts) || { '1': { main: [0, 0, 100, 100] } };
-    var L = layouts[name] || layouts['1'];
-    if (name === currentLayout) return;
-    currentLayout = name;
+    return layouts[pl && pl.layout] || layouts['1'];
+  }
+
+  function setLayout(pl) {
+    var L = zonesOf(pl);
+    var key = (pl ? pl.layout : '1') + '|' + JSON.stringify(L);
+    if (key === currentLayout) return;
+    currentLayout = key;
     var holder = $('zones');
     for (var z in zones) {
       if (L[z]) {
@@ -322,7 +329,7 @@
     playlist = pl; plKey = key;
     status.pl = pl.name;
     renderTicker(pl.ticker);
-    setLayout(pl.layout);
+    setLayout(pl);
     if (!sameList) { idx = -1; next(); return; }
     // same playlist edited: let the current item finish, then continue with the new list
     if (idx >= pl.items.length) idx = -1;
@@ -380,13 +387,14 @@
       onError: skip
     });
 
-    var L = (cfg.content && cfg.content.layouts && cfg.content.layouts[playlist.layout]) || {};
+    var L = zonesOf(playlist);
     var extra = ['side', 'bottom'];
     for (var e = 0; e < extra.length; e++) {
       var zn = extra[e];
       if (!L[zn]) continue;
       var a = it[zn] && valid(it[zn]) ? it[zn] : null;
-      if (a) zones[zn].show(a, { fit: 'cover', muted: true, loop: true, onError: function () {} });
+      // โซนข้าง/ล่างใช้ "contain" (พอดีโซน) กันภาพล้นขอบ/ถูกตัด — เหมาะกับโลโก้
+      if (a) zones[zn].show(a, { fit: 'contain', muted: true, loop: true, onError: function () {} });
       else zones[zn].clear();
     }
   }

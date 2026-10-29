@@ -77,6 +77,31 @@ function timeAgo(iso) {
   return new Date(iso).toLocaleString('th-TH');
 }
 
+// layout ที่ปรับขนาดโซนได้ (ต้องตรงกับ ADJUSTABLE/resolvedZones ฝั่งเซิร์ฟเวอร์)
+const ADJUSTABLE = { '2a': 1, '2b': 1, '2c': 1, '2d': 1, '3a': 1, '3b': 1, '2bp': 1 };
+const clampN = (v, lo, hi, def) => { const n = Number(v); return isFinite(n) ? Math.max(lo, Math.min(hi, n)) : def; };
+
+// คำนวณพิกัดโซนหลังปรับขนาด (เหมือนฝั่งเซิร์ฟเวอร์) ใช้ทั้งแสดงผลและคำนวณขนาดรูปแนะนำ
+function resolvedZonesC(layout, adj) {
+  const base = S.layouts[layout] || S.layouts['1'] || { main: [0, 0, 100, 100] };
+  if (!ADJUSTABLE[layout] || !adj) return base;
+  const sp = adj.side, bp = adj.bottom;
+  switch (layout) {
+    case '2a': case '2d': { const w = clampN(sp, 10, 60, layout === '2d' ? 50 : 25); return { side: [0, 0, w, 100], main: [w, 0, 100 - w, 100] }; }
+    case '2b': case '2c': { const w = clampN(sp, 10, 60, layout === '2c' ? 50 : 25); return { main: [0, 0, 100 - w, 100], side: [100 - w, 0, w, 100] }; }
+    case '3a': { const w = clampN(sp, 10, 60, 25), h = clampN(bp, 8, 45, 25); return { side: [0, 0, w, 100 - h], main: [w, 0, 100 - w, 100 - h], bottom: [0, 100 - h, 100, h] }; }
+    case '3b': { const w = clampN(sp, 10, 60, 25), h = clampN(bp, 8, 45, 25); return { main: [0, 0, 100 - w, 100 - h], side: [100 - w, 0, w, 100 - h], bottom: [0, 100 - h, 100, h] }; }
+    case '2bp': { const sh = clampN(sp, 20, 80, 57.81); return { main: [0, 0, 100, 100 - sh], side: [0, 100 - sh, 100, sh] }; }
+    default: return base;
+  }
+}
+
+// ขนาดพิกเซลแนะนำของโซน บนจอ 1920x1080 (แนวตั้งใช้ 1080x1920)
+function zonePx(rect, portrait) {
+  const W = portrait ? 1080 : 1920, H = portrait ? 1920 : 1080;
+  return Math.round(rect[2] / 100 * W) + '×' + Math.round(rect[3] / 100 * H) + ' px';
+}
+
 function miniLayout(name) {
   const L = S.layouts[name] || {};
   const portrait = name.endsWith('p');
@@ -377,8 +402,13 @@ function zoneSelect(zone, value, i) {
 
 function drawPlaylist() {
   const p = editPl;
-  const L = S.layouts[p.layout] || {};
+  if (p.zoneAdjust == null) p.zoneAdjust = {};
+  const portrait = p.layout.endsWith('p');
+  const L = resolvedZonesC(p.layout, p.zoneAdjust);
+  const adjustable = !!ADJUSTABLE[p.layout];
   const total = p.items.reduce((a, it) => a + (it.duration || 0), 0);
+  // ป้ายขนาดรูปแนะนำของแต่ละโซน (กันภาพล้นขอบ/เบลอ)
+  const zoneHint = (z) => L[z] ? `<span class="pxhint" title="ขนาดรูป/วิดีโอแนะนำสำหรับโซนนี้">${z} ≈ ${zonePx(L[z], portrait)}</span>` : '';
   const groups = usedBy(p.id);
   $('#pl-editor').innerHTML = `
     <div class="bar">
@@ -394,6 +424,15 @@ function drawPlaylist() {
     <div class="section">
       <div class="bar"><strong>Layout</strong><span><span class="zone-key"><i class="z-main"></i>main</span><span class="zone-key"><i class="z-side"></i>side</span><span class="zone-key"><i class="z-bottom"></i>bottom</span></span></div>
       <div class="layouts">${Object.keys(S.layouts).map((k) => `<div class="layout-opt ${k === p.layout ? 'active' : ''}" data-layout="${k}">${miniLayout(k)}${k} · ${LAYOUT_TH[k] || ''}</div>`).join('')}</div>
+      <div class="pxbox"><strong>ขนาดสื่อแนะนำ</strong> (จอ ${portrait ? '1080×1920' : '1920×1080'}) — ใช้รูป/วิดีโอขนาดนี้เพื่อให้คมและไม่ล้นขอบ: ${['main', 'side', 'bottom'].map(zoneHint).join(' ')}</div>
+      ${adjustable ? `<div class="resize">
+        <strong>ปรับขนาดโซน</strong>
+        <label>${portrait ? 'ความสูงโซนล่าง (side)' : 'ความกว้างโซนข้าง (side)'}: <b id="sz-side-v">${Math.round(L.side ? (portrait ? L.side[3] : L.side[2]) : 25)}%</b>
+          <input type="range" id="sz-side" min="${portrait ? 20 : 10}" max="${portrait ? 80 : 60}" step="1" value="${L.side ? (portrait ? L.side[3] : L.side[2]) : 25}"></label>
+        ${L.bottom ? `<label>ความสูงโซนล่าง (bottom): <b id="sz-bottom-v">${Math.round(L.bottom[3])}%</b>
+          <input type="range" id="sz-bottom" min="8" max="45" step="1" value="${Math.round(L.bottom[3])}"></label>` : ''}
+        <button class="ghost small" id="sz-reset">คืนค่าเริ่มต้น</button>
+      </div>` : '<p class="hint">Layout นี้ใช้สัดส่วนตายตัว · เลือก 2a/2b/2c/2d/3a/3b หรือ 2bp เพื่อปรับขนาดโซนได้</p>'}
     </div>
 
     <div class="section">
@@ -436,7 +475,18 @@ function drawPlaylist() {
   const dirty = () => { plDirty = true; $('#pl-save').textContent = 'บันทึก *'; };
   const redraw = () => { plDirty = true; drawPlaylist(); };
   $('#pl-name').oninput = (e) => { p.name = e.target.value; dirty(); };
-  $$('[data-layout]').forEach((d) => (d.onclick = () => { p.layout = d.dataset.layout; redraw(); }));
+  $$('[data-layout]').forEach((d) => (d.onclick = () => { p.layout = d.dataset.layout; p.zoneAdjust = {}; redraw(); }));
+  // ปรับขนาดโซน: ลาก slider แล้วอัปเดตตัวเลข + วาดใหม่เมื่อปล่อย
+  const szSide = $('#sz-side'), szBottom = $('#sz-bottom');
+  if (szSide) {
+    szSide.oninput = () => { $('#sz-side-v').textContent = szSide.value + '%'; };
+    szSide.onchange = () => { p.zoneAdjust = { ...p.zoneAdjust, side: Number(szSide.value) }; redraw(); };
+  }
+  if (szBottom) {
+    szBottom.oninput = () => { $('#sz-bottom-v').textContent = szBottom.value + '%'; };
+    szBottom.onchange = () => { p.zoneAdjust = { ...p.zoneAdjust, bottom: Number(szBottom.value) }; redraw(); };
+  }
+  if ($('#sz-reset')) $('#sz-reset').onclick = () => { p.zoneAdjust = {}; redraw(); };
   $$('#pl-editor .row-item').forEach((row) => {
     const i = Number(row.dataset.i);
     $$('[data-k]', row).forEach((inp) => (inp.onchange = () => {
@@ -464,7 +514,7 @@ function drawPlaylist() {
   $('#tk-on').onchange = (e) => { p.ticker.enabled = e.target.checked; dirty(); };
   $('#tk-speed').onchange = (e) => { p.ticker.speed = Number(e.target.value); dirty(); };
   $('#pl-save').onclick = () => run(async () => {
-    await api('PUT', '/playlists/' + p.id, { name: p.name, layout: p.layout, ticker: p.ticker, items: p.items });
+    await api('PUT', '/playlists/' + p.id, { name: p.name, layout: p.layout, zoneAdjust: p.zoneAdjust, ticker: p.ticker, items: p.items });
     plDirty = false; await refresh();
   }, groups.length ? 'บันทึกแล้ว — อย่าลืม Deploy กลุ่มที่ใช้ playlist นี้' : 'บันทึกแล้ว');
   $('#pl-copy').onclick = () => { if (confirmLeave()) run(async () => { const c = await api('POST', `/playlists/${p.id}/copy`); await refresh(); openPlaylist(c.id); }, 'ทำสำเนาแล้ว'); };

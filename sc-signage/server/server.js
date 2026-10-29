@@ -45,6 +45,37 @@ const LAYOUTS = {
   '2bp': { main: [0, 0, 100, 42.19], side: [0, 42.19, 100, 57.81] } // portrait: main top, side below
 };
 
+// ซึ่ง layout ปรับขนาดโซนข้าง/ล่างได้ (side = ความกว้างโซนข้าง %, bottom = ความสูงโซนล่าง %)
+// layout อื่นใช้สัดส่วนตายตัว
+const ADJUSTABLE = { '2a': 1, '2b': 1, '2c': 1, '2d': 1, '3a': 1, '3b': 1, '2bp': 1 };
+const clampN = (v, lo, hi, def) => {
+  const n = Number(v);
+  return isFinite(n) ? Math.max(lo, Math.min(hi, n)) : def;
+};
+
+// คืนพิกัดโซนของ playlist หลังปรับขนาด (ถ้าไม่ปรับ = ค่าตั้งต้นของ layout)
+function resolvedZones(layout, adj) {
+  const base = LAYOUTS[layout] || LAYOUTS['1'];
+  if (!ADJUSTABLE[layout] || !adj) return base;
+  const sp = adj.side, bp = adj.bottom;
+  switch (layout) {
+    case '2a': case '2d': { const w = clampN(sp, 10, 60, layout === '2d' ? 50 : 25); return { side: [0, 0, w, 100], main: [w, 0, 100 - w, 100] }; }
+    case '2b': case '2c': { const w = clampN(sp, 10, 60, layout === '2c' ? 50 : 25); return { main: [0, 0, 100 - w, 100], side: [100 - w, 0, w, 100] }; }
+    case '3a': { const w = clampN(sp, 10, 60, 25), h = clampN(bp, 8, 45, 25); return { side: [0, 0, w, 100 - h], main: [w, 0, 100 - w, 100 - h], bottom: [0, 100 - h, 100, h] }; }
+    case '3b': { const w = clampN(sp, 10, 60, 25), h = clampN(bp, 8, 45, 25); return { main: [0, 0, 100 - w, 100 - h], side: [100 - w, 0, w, 100 - h], bottom: [0, 100 - h, 100, h] }; }
+    case '2bp': { const sh = clampN(sp, 20, 80, 57.81); return { main: [0, 0, 100, 100 - sh], side: [0, 100 - sh, 100, sh] }; }
+    default: return base;
+  }
+}
+
+function cleanZoneAdjust(a) {
+  if (!a || typeof a !== 'object') return null;
+  const out = {};
+  if (a.side != null) out.side = clampN(a.side, 10, 80, 25);
+  if (a.bottom != null) out.bottom = clampN(a.bottom, 8, 45, 25);
+  return Object.keys(out).length ? out : null;
+};
+
 // ---------------------------------------------------------------- storage
 const newId = (prefix) => prefix + crypto.randomBytes(5).toString('hex');
 const nowIso = () => new Date().toISOString();
@@ -224,6 +255,7 @@ function playlistPayload(p) {
     id: p.id,
     name: p.name,
     layout: LAYOUTS[p.layout] ? p.layout : '1',
+    zones: resolvedZones(LAYOUTS[p.layout] ? p.layout : '1', p.zoneAdjust), // พิกัดโซนที่ปรับขนาดแล้ว
     ticker: p.ticker,
     items: p.items.map((it) => {
       const main = assetPayload(it.main);
@@ -504,7 +536,7 @@ admin.delete('/assets/:id', (req, res) => {
 
 // playlists ------------------------------------------------------
 admin.post('/playlists', (req, res) => {
-  const p = { id: newId('p'), name: String(req.body.name || 'Playlist ใหม่').slice(0, 100), layout: LAYOUTS[req.body.layout] ? req.body.layout : '1', ticker: cleanTicker(req.body.ticker), items: cleanItems(req.body.items) };
+  const p = { id: newId('p'), name: String(req.body.name || 'Playlist ใหม่').slice(0, 100), layout: LAYOUTS[req.body.layout] ? req.body.layout : '1', zoneAdjust: cleanZoneAdjust(req.body.zoneAdjust), ticker: cleanTicker(req.body.ticker), items: cleanItems(req.body.items) };
   db.playlists.push(p);
   commit();
   res.json(p);
@@ -516,6 +548,7 @@ admin.put('/playlists/:id', (req, res) => {
   const b = req.body;
   if (typeof b.name === 'string') p.name = b.name.slice(0, 100);
   if (b.layout !== undefined) p.layout = LAYOUTS[b.layout] ? b.layout : '1';
+  if (b.zoneAdjust !== undefined) p.zoneAdjust = cleanZoneAdjust(b.zoneAdjust);
   if (b.ticker !== undefined) p.ticker = cleanTicker(b.ticker);
   if (Array.isArray(b.items)) p.items = cleanItems(b.items);
   commit();
