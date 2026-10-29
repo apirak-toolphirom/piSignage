@@ -16,14 +16,18 @@
 
 #include <WiFi.h>
 #include <HTTPClient.h>
+#include <ESPmDNS.h>
 
 // ===================== ตั้งค่าตรงนี้ =====================
 const char* WIFI_SSID = "ชื่อ-WiFi";
 const char* WIFI_PASS = "รหัส-WiFi";
 
-// ที่อยู่ server และกลุ่มของจอนี้ (ดู groupId ในหน้า Groups หรือใช้ "gdefault")
-const char* SERVER   = "http://192.168.1.105:3000";
-const char* GROUP_ID = "gdefault";
+// ใช้ "ชื่อ" แทน IP ได้: server ประกาศ mDNS ชื่อ scsignage.local
+//   HOST = "scsignage.local"  (ตั้ง MDNS_NAME ที่ server ได้ถ้าอยากเปลี่ยนชื่อ)
+//   หรือใส่ IP ตรงๆ ก็ได้ เช่น "192.168.1.105"
+const char* HOST     = "scsignage.local";
+const int   PORT     = 3000;
+const char* GROUP_ID = "gdefault";   // groupId ของจอ (ดูในหน้า Groups หรือใช้ "gdefault")
 
 const int   RELAY_PIN       = 26;     // ขาต่อ IN ของโมดูลรีเลย์
 const bool  RELAY_ACTIVE_LOW = true;  // โมดูลรีเลย์จีนส่วนใหญ่สั่งงานด้วย LOW — ถ้ารีเลย์ทำงานกลับด้าน เปลี่ยนเป็น false
@@ -39,6 +43,21 @@ bool tvOn = true;          // สถานะที่สั่งรีเล�
 int  pendingVal = -1;      // ค่าที่กำลังรอยืนยัน
 int  pendingCount = 0;
 int  failCount = 0;
+IPAddress serverIp;        // IP ที่ resolve ได้ของ server
+bool haveIp = false;
+
+// แปลงชื่อ HOST เป็น IP: ถ้าเป็น .local ใช้ mDNS, ถ้าเป็น IP อยู่แล้วใช้ตรงๆ
+bool resolveHost() {
+  IPAddress ip;
+  if (ip.fromString(HOST)) { serverIp = ip; haveIp = true; return true; } // HOST เป็น IP
+  String h = String(HOST);
+  if (h.endsWith(".local")) h = h.substring(0, h.length() - 6);           // ตัด .local ให้ mDNS
+  IPAddress r = MDNS.queryHost(h, 3000);
+  if (r != IPAddress(0, 0, 0, 0)) { serverIp = r; haveIp = true; Serial.printf("[mdns] %s -> %s\n", HOST, r.toString().c_str()); return true; }
+  Serial.printf("[mdns] resolve %s ไม่สำเร็จ\n", HOST);
+  haveIp = false;
+  return false;
+}
 
 void setRelay(bool on) {
   tvOn = on;
@@ -55,15 +74,19 @@ void connectWifi() {
   unsigned long t0 = millis();
   while (WiFi.status() != WL_CONNECTED && millis() - t0 < 20000) { delay(300); Serial.print("."); }
   Serial.println();
-  if (WiFi.status() == WL_CONNECTED) Serial.printf("[wifi] ok, ip=%s\n", WiFi.localIP().toString().c_str());
-  else Serial.println("[wifi] failed, will retry");
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.printf("[wifi] ok, ip=%s\n", WiFi.localIP().toString().c_str());
+    MDNS.begin("sc-tv-switch");   // เปิด mDNS ฝั่ง ESP32 เพื่อให้ queryHost ใช้งานได้
+    resolveHost();
+  } else Serial.println("[wifi] failed, will retry");
 }
 
 // คืนค่า 1=เปิด 0=ปิด -1=ติดต่อไม่ได้
 int fetchTvState() {
   if (WiFi.status() != WL_CONNECTED) return -1;
+  if (!haveIp && !resolveHost()) return -1;         // ยังไม่รู้ IP -> ลอง resolve ก่อน
   HTTPClient http;
-  String url = String(SERVER) + "/api/tv/" + GROUP_ID + "?fmt=text";
+  String url = "http://" + serverIp.toString() + ":" + PORT + "/api/tv/" + GROUP_ID + "?fmt=text";
   http.begin(url);
   http.setTimeout(8000);
   int code = http.GET();
@@ -75,6 +98,7 @@ int fetchTvState() {
     else if (body == "0") result = 0;
   } else {
     Serial.printf("[http] GET %s -> %d\n", url.c_str(), code);
+    haveIp = false;   // อาจเป็นเพราะ IP server เปลี่ยน -> resolve ใหม่รอบหน้า
   }
   http.end();
   return result;

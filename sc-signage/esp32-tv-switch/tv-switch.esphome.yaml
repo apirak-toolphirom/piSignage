@@ -3,7 +3,7 @@
 # แก้ค่าใน substitutions แล้ว esphome run tv-switch.esphome.yaml
 substitutions:
   name: sc-tv-switch
-  server_group_url: "http://192.168.1.105:3000/api/tv/gdefault?fmt=text"
+  server_group_url: "http://scsignage.local:3000/api/tv/gdefault?fmt=text"
   relay_pin: GPIO26
   # รีเลย์จีนส่วนใหญ่ active-low: inverted: true  (ถ้ากลับด้านให้เปลี่ยนเป็น false)
   relay_inverted: "true"

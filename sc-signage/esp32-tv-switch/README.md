@@ -33,7 +33,7 @@ ESP32 GND    ──────────► GND
 1. Arduino IDE → ติดตั้งบอร์ด ESP32 (Boards Manager: "esp32 by Espressif")
 2. เปิด `esp32-tv-switch.ino` แก้ค่าด้านบน:
    - `WIFI_SSID`, `WIFI_PASS`
-   - `SERVER` = ที่อยู่ server เช่น `http://192.168.1.105:3000`
+   - `HOST` = ชื่อ server `scsignage.local` (หรือใส่ IP ตรงๆ ก็ได้) · `PORT` = 3000
    - `GROUP_ID` = ไอดีกลุ่มของจอ (ดูในหน้า Groups หรือใช้ `gdefault` สำหรับกลุ่มค่าเริ่มต้น)
    - `RELAY_ACTIVE_LOW` = ถ้ารีเลย์ทำงานกลับด้าน (ทีวีดับตอนควรเปิด) ให้สลับค่า
 3. เลือกบอร์ด "ESP32 Dev Module" → Upload
@@ -56,3 +56,9 @@ GET /api/tv/<groupId>?fmt=text                -> "1" หรือ "0"
 ```
 
 ไม่ต้องล็อกอิน (เปิดให้ ESP32 เรียก) เปิดเผยแค่สถานะเปิด/ปิด
+
+## ใช้ชื่อแทน IP
+
+server ประกาศชื่อผ่าน mDNS เป็น `scsignage.local` (เปลี่ยนได้ด้วยตัวแปรแวดล้อม `MDNS_NAME`)
+- **ESP32** ใช้ `scsignage.local` ได้เลย (เฟิร์มแวร์ resolve เองผ่าน mDNS) — ไม่ต้องรู้ IP และ IP เปลี่ยนก็ยังทำงาน
+- **กล่อง AIS (Android 7)** มักแปลชื่อ `.local` ไม่ได้ — ให้ใช้ IP ต่อไป หรือ (ก) ตั้ง DHCP reservation + ชื่อที่ router / DNS ของหน่วยงาน แล้วใส่ชื่อนั้นในแอป หรือ (ข) แจ้งให้เพิ่มมDNS resolver ในแอป (ต้อง build APK ใหม่)

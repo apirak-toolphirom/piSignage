@@ -8,6 +8,7 @@
  *   /media   uploaded media
  */
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
 const express = require('express');
@@ -720,11 +721,42 @@ app.use((err, req, res, next) => {
   res.status(status).json({ error: status === 413 ? `ไฟล์ใหญ่เกิน ${MAX_UPLOAD_MB} MB` : err.message });
 });
 
+// ---- รายการ IPv4 ของเครื่องในวง LAN ----
+function lanAddresses() {
+  const out = [];
+  for (const list of Object.values(os.networkInterfaces())) {
+    for (const a of list || []) if (a.family === 'IPv4' && !a.internal) out.push(a.address);
+  }
+  return out;
+}
+
+// ---- mDNS: ประกาศชื่อ <MDNS_NAME>.local ให้เรียก server ด้วยชื่อแทน IP ----
+// ESP32 และอุปกรณ์ที่รองรับ .local จะเรียก http://scsignage.local:PORT ได้โดยไม่ต้องรู้ IP
+// (กล่อง Android 7 อาจแปลชื่อ .local ไม่ได้ ดู README)
+const MDNS_NAME = (process.env.MDNS_NAME || 'scsignage').replace(/[^a-z0-9-]/gi, '').toLowerCase() || 'scsignage';
+function startMdns() {
+  let mdns;
+  try { mdns = require('multicast-dns')(); }
+  catch (e) { console.warn(`  ! mDNS ปิดอยู่ (ไม่พบแพ็กเกจ multicast-dns) — ใช้ IP แทน หรือรัน npm install`); return; }
+  const host = MDNS_NAME + '.local';
+  mdns.on('query', (query) => {
+    const wants = query.questions.some((q) => q.name === host && (q.type === 'A' || q.type === 'ANY'));
+    if (!wants) return;
+    const answers = lanAddresses().map((ip) => ({ name: host, type: 'A', ttl: 120, data: ip }));
+    if (answers.length) mdns.respond({ answers });
+  });
+  mdns.on('error', (e) => console.warn('  ! mDNS error:', e.message));
+  console.log(`  ชื่อ  : http://${host}:${PORT}/  (mDNS — สำหรับ ESP32/อุปกรณ์ที่รองรับ .local)`);
+}
+
 const server = app.listen(PORT, () => {
   console.log(`SC Signage server on port ${PORT}`);
-  console.log(`  admin : http://<server-ip>:${PORT}/admin/  (user: ${ADMIN_USER})`);
-  console.log(`  player: http://<server-ip>:${PORT}/player/?id=<player-id>`);
+  const ips = lanAddresses();
+  if (ips.length) for (const ip of ips) console.log(`  admin : http://${ip}:${PORT}/admin/  (user: ${ADMIN_USER})`);
+  else console.log(`  admin : http://<server-ip>:${PORT}/admin/  (user: ${ADMIN_USER})`);
+  console.log(`  player: /player/?id=<player-id>`);
   console.log(`  data  : ${DATA_DIR}`);
+  startMdns();
   if (!process.env.ADMIN_PASS) console.warn('  ! using default admin password — set ADMIN_PASS');
 });
 

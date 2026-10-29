@@ -67,8 +67,21 @@ ADMIN_PASS=รหัสผ่าน node server.js        # Windows: set ADMIN_P
 | `ADMIN_USER` / `ADMIN_PASS` | admin / admin1234 | บัญชีหน้า admin (ควรเปลี่ยน) |
 | `DATA_DIR` | `server/data` | ที่เก็บ `db.json`, `media/`, `snapshots/` — สำรองโฟลเดอร์นี้โฟลเดอร์เดียวพอ |
 | `MAX_UPLOAD_MB` | 2048 | ขนาดไฟล์อัปโหลดสูงสุด |
+| `MDNS_NAME` | scsignage | ชื่อ mDNS ของ server (เรียก `http://<ชื่อ>.local:PORT`) |
 
 อัปเกรดจากเวอร์ชันแรก: เซิร์ฟเวอร์แปลงข้อมูลให้เองตอนเปิด (สำรองไว้ที่ `db.json.v1-backup`) — จอเดิมถูกจัดเข้ากลุ่มตามชื่อกลุ่มเดิมและ Deploy ให้อัตโนมัติ
+
+## ใช้ชื่อแทน IP (mDNS)
+
+server ประกาศชื่อตัวเองผ่าน mDNS เป็น `scsignage.local` (เปลี่ยนด้วย `MDNS_NAME`) จึงเรียกได้ด้วย
+`http://scsignage.local:3000/admin/` โดยไม่ต้องรู้ IP และ IP เปลี่ยนก็ยังใช้ได้
+
+- **ESP32 / เครื่องที่รองรับ .local** ใช้ชื่อนี้ได้เลย
+- **คอม Windows/Mac** ส่วนใหญ่เปิดหน้า admin ด้วยชื่อนี้ได้ (มี mDNS ในตัว)
+- **กล่อง AIS (Android 7)** มักแปลชื่อ `.local` ไม่ได้ → ยังต้องใส่ **IP** ในแอป ทางแก้ให้ใช้ชื่อกับกล่อง:
+  ตั้ง **DHCP reservation** ที่ router ให้ server ได้ IP คงที่ แล้วผูกชื่อใน DNS ของหน่วยงาน
+  (เช่น `signage.sci.ubu.ac.th`) หรือแจ้งให้เพิ่ม mDNS resolver ในแอป (ต้อง build APK ใหม่)
+- แนะนำ: ตั้ง **DHCP reservation** ให้ server เสมอ IP จะไม่เปลี่ยนแม้ไม่ใช้ชื่อ
 
 ## 2. ติดตั้งแอปบนกล่อง Android
 
