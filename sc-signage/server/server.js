@@ -199,6 +199,30 @@ function cleanTv(tv) {
   };
 }
 
+// ---- คำนวณว่าทีวีควรเปิดอยู่ไหมตอนนี้ (ตรรกะเดียวกับที่จอใช้) สำหรับ ESP32 ตัดไฟทีวี ----
+const toMin = (t) => { const p = String(t).split(':'); return (Number(p[0]) || 0) * 60 + (Number(p[1]) || 0); };
+const ymdLocal = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+function tvWindow(row, d) {
+  const today = ymdLocal(d);
+  if (row.dateFrom && today < row.dateFrom) return false;
+  if (row.dateTo && today > row.dateTo) return false;
+  const m = d.getHours() * 60 + d.getMinutes(), a = toMin(row.on), b = toMin(row.off), day = d.getDay();
+  if (a <= b) return row.days.indexOf(day) >= 0 && m >= a && m < b;
+  if (m >= a) return row.days.indexOf(day) >= 0;            // ข้ามเที่ยงคืน: ช่วงหัวค่ำ
+  if (m < b) return row.days.indexOf((day + 6) % 7) >= 0;   // ข้ามเที่ยงคืน: ช่วงเช้ามืด (นับเป็นของเมื่อวาน)
+  return false;
+}
+function tvOnNow(tv, d) {
+  if (!tv || !tv.enabled || !tv.rows || !tv.rows.length) return true; // ไม่ตั้งตาราง = เปิดตลอด
+  const today = ymdLocal(d), dated = [], weekly = [];
+  for (const r of tv.rows) {
+    if (r.dateFrom || r.dateTo) { if ((!r.dateFrom || today >= r.dateFrom) && (!r.dateTo || today <= r.dateTo)) dated.push(r); }
+    else weekly.push(r);
+  }
+  const rows = dated.length ? dated : weekly; // วันพิเศษ (มีช่วงวันที่) ทับตารางรายสัปดาห์
+  return rows.some((r) => tvWindow(r, d));
+}
+
 function cleanItems(list) {
   if (!Array.isArray(list)) return [];
   const ok = (id) => (id && assetById(id) ? id : '');
@@ -389,6 +413,19 @@ app.post('/api/player/:id/snapshot', express.raw({ type: 'image/jpeg', limit: '3
   const pl = db.players.find((p) => p.id === cleanPlayerId(req.params.id));
   if (!pl || !Buffer.isBuffer(req.body) || req.body.length < 100) return res.status(400).json({ error: 'bad snapshot' });
   fs.writeFile(path.join(SNAP_DIR, pl.id + '.jpg'), req.body, () => res.json({ ok: true }));
+});
+
+// สถานะทีวีเปิด/ปิดตอนนี้ของกลุ่ม — สำหรับ ESP32 ตัดไฟทีวีตามตารางเดียวกับจอ
+// เรียกด้วย groupId หรือ playerId; ?fmt=text คืน "1"/"0" ล้วนๆ ให้ ESP32 อ่านง่าย
+app.get('/api/tv/:id', (req, res) => {
+  const id = String(req.params.id);
+  let g = db.groups.find((x) => x.id === id);
+  if (!g) { const pl = db.players.find((p) => p.id === cleanPlayerId(id)); if (pl) g = db.groups.find((x) => x.id === pl.groupId); }
+  res.set('Cache-Control', 'no-store');
+  if (!g) return res.status(404).type('text/plain').send(req.query.fmt === 'text' ? '1' : JSON.stringify({ error: 'unknown group', on: 1 }));
+  const on = tvOnNow(g.tv, new Date());
+  if (req.query.fmt === 'text') return res.type('text/plain').send(on ? '1' : '0');
+  res.json({ group: g.name, on: on ? 1 : 0, serverTime: new Date().toISOString(), tvEnabled: !!(g.tv && g.tv.enabled) });
 });
 
 app.use('/media', express.static(MEDIA_DIR, { maxAge: '365d', immutable: true }));

@@ -1,0 +1,58 @@
+# SC Signage — ESP32 ตัดไฟทีวีตามตาราง (เวอร์ชัน ESPHome)
+# ทางเลือกแทนไฟล์ .ino ถ้าคุณใช้ Home Assistant / ESPHome อยู่แล้ว
+# แก้ค่าใน substitutions แล้ว esphome run tv-switch.esphome.yaml
+substitutions:
+  name: sc-tv-switch
+  server_group_url: "http://192.168.1.105:3000/api/tv/gdefault?fmt=text"
+  relay_pin: GPIO26
+  # รีเลย์จีนส่วนใหญ่ active-low: inverted: true  (ถ้ากลับด้านให้เปลี่ยนเป็น false)
+  relay_inverted: "true"
+
+esphome:
+  name: ${name}
+esp32:
+  board: esp32dev
+
+logger:
+api:
+ota:
+wifi:
+  ssid: "ชื่อ-WiFi"
+  password: "รหัส-WiFi"
+
+switch:
+  - platform: gpio
+    id: tv_relay
+    name: "TV Relay"
+    pin:
+      number: ${relay_pin}
+      inverted: ${relay_inverted}
+    restore_mode: ALWAYS_ON   # ไฟดับ/รีบูต -> เปิดทีวีไว้ก่อน แล้วรอบถัดไปปรับตามตาราง
+
+status_led:
+  pin: GPIO2
+
+# ถาม server ทุก 30 วินาที แล้วสั่งรีเลย์ตามผล "1"/"0"
+http_request:
+  useragent: sc-tv-switch
+  timeout: 8s
+
+interval:
+  - interval: 30s
+    then:
+      - http_request.get:
+          url: ${server_group_url}
+          on_response:
+            then:
+              - lambda: |-
+                  if (response_status == 200) {
+                    std::string b = id(http_request_id).get_string();
+                    // ตัดช่องว่าง/ขึ้นบรรทัด
+                    while (!b.empty() && (b.back()=='\n'||b.back()=='\r'||b.back()==' ')) b.pop_back();
+                    if (b == "1") id(tv_relay).turn_on();
+                    else if (b == "0") id(tv_relay).turn_off();
+                    // ค่าอื่น/ติดต่อไม่ได้ = คงสถานะเดิม
+                  }
+
+# หมายเหตุ: ESPHome รุ่นใหม่ http_request อาจต้องประกาศ id และใช้ response ต่างออกไปเล็กน้อย
+# ถ้า build ไม่ผ่าน แนะนำใช้ไฟล์ .ino (Arduino) ซึ่งตรงไปตรงมากว่า
